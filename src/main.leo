@@ -102,6 +102,31 @@ program dive_v0_1_0.aleo {
     }
 
 
+    // Change the deadline of an event.
+    async transition change_deadline(event_id: field, new_deadline: u64, current_time: u64) -> Future {
+        // Ensure the new deadline is after the current time.
+        assert(new_deadline.gte(current_time));
+        return finalize_change_deadline(self.caller, event_id, new_deadline, current_time);
+    }
+
+    async function finalize_change_deadline(caller: address, event_id: field, new_deadline: u64, current_time: u64) {
+        let event: Event = events.get(event_id);
+        // Ensure the transition was called by the event owner.false
+        assert_eq(caller, event.event_owner);
+        // Ensure the new deadline is later than the previous deadline.
+        assert(new_deadline.gt(event.deadline));
+
+        let updated_event: Event = Event {
+            id: event_id,
+            ticket_supply: event.ticket_supply,
+            ticket_price: event.ticket_price,
+            deadline: new_deadline,
+            event_owner: event.event_owner,
+        };
+        events.set(event_id, updated_event);
+    }
+
+
     // Buy tickets for an event.
     async transition buy_tickets(
         private event_id: field,
