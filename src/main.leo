@@ -8,6 +8,8 @@ program dive_v0_1_0.aleo {
         ticket_supply: u32,
         // Price per ticket in microcredits.
         ticket_price: u64,
+        // Timestamp after which no tickets may be bought or refunded.
+        deadline: u64,
         // Owner of the event who will receive payment for purchased tickets.
         event_owner: address,
     }
@@ -39,11 +41,13 @@ program dive_v0_1_0.aleo {
         id: field,
         ticket_supply: u32,
         ticket_price: u64,
+        deadline: u64,
     ) -> Future {
         let event: Event = Event {
             id,
             ticket_supply,
             ticket_price,
+            deadline,
             event_owner: self.caller,
         };
         return finalize_register_event(event);
@@ -57,18 +61,21 @@ program dive_v0_1_0.aleo {
 
 
     // Increase the ticket supply for an event.
-    async transition add_tickets(event_id: field, num_tickets: u32) -> Future {
-        return finalize_add_tickets(self.caller, event_id, num_tickets);
+    async transition add_tickets(event_id: field, num_tickets: u32, current_time: u64) -> Future {
+        return finalize_add_tickets(self.caller, event_id, num_tickets, current_time);
     }
 
-    async function finalize_add_tickets(caller: address, event_id: field, num_tickets: u32) {
+    async function finalize_add_tickets(caller: address, event_id: field, num_tickets: u32, current_time: u64) {
         let event: Event = events.get(event_id);
         // Ensure the transition was called by the event owner.
         assert_eq(caller, event.event_owner);
+        // Ensure current time is before the event deadline.
+        assert(current_time.lt(event.deadline));
         let updated_event: Event = Event {
             id: event_id,
             ticket_supply: event.ticket_supply + num_tickets,
             ticket_price: event.ticket_price,
+            deadline: event.deadline,
             event_owner: event.event_owner,
         };
         events.set(event_id, updated_event);
@@ -88,6 +95,7 @@ program dive_v0_1_0.aleo {
             id: event_id,
             ticket_supply: event.ticket_supply,
             ticket_price: new_price,
+            deadline: event.deadline,
             event_owner: event.event_owner,
         };
         events.set(event_id, updated_event);
@@ -100,6 +108,7 @@ program dive_v0_1_0.aleo {
         public num_tickets: u32,
         public ticket_price: u64,
         public event_owner: address,
+        public current_time: u64,
     ) -> Future {
         let ticket_holder_hash: field = hash_ticket_holder(self.caller, event_id);
         let total_cost: u64 = num_tickets as u64 * ticket_price;
@@ -108,7 +117,7 @@ program dive_v0_1_0.aleo {
         // Transfer funds from the sender's record to the event owner.
         let (change_record, transfer_fut): (credits.aleo/credits, Future) = credits.aleo/transfer_private_to_public(sender_record, event_owner, total_cost);
         
-        return finalize_buy_tickets(self.caller, event_id, ticket_holder_hash, num_tickets, create_record_fut, transfer_fut);
+        return finalize_buy_tickets(self.caller, event_id, ticket_holder_hash, num_tickets, current_time, create_record_fut, transfer_fut);
     }
 
     async function finalize_buy_tickets(
@@ -116,12 +125,15 @@ program dive_v0_1_0.aleo {
         event_id: field,
         ticket_holder: field,
         num_tickets: u32,
+        current_time: u64,
         create_record_fut: Future,
         transfer_fut: Future,
     ) {
         let event: Event = events.get(event_id);
         // Ensure there are enough tickets to fulfill the request.
         assert(event.ticket_supply.gte(num_tickets));
+        // Ensure current time is before the event deadline.
+        assert(current_time.lt(event.deadline));
         let total_cost: u64 = num_tickets as u64 * event.ticket_price;
 
         // Subtract the purchased tickets from the ticket supply.
@@ -129,6 +141,7 @@ program dive_v0_1_0.aleo {
             id: event_id,
             ticket_supply: event.ticket_supply - num_tickets,
             ticket_price: event.ticket_price,
+            deadline: event.deadline,
             event_owner: event.event_owner,
         };
         events.set(event_id, updated_event);
@@ -151,21 +164,29 @@ program dive_v0_1_0.aleo {
         private event_id: field,
         private recipient: address,
         private num_tickets: u32,
+        public current_time: u64,
     ) -> Future {
         let sender_hash: field = hash_ticket_holder(self.caller, event_id);
         let recipient_hash: field = hash_ticket_holder(recipient, event_id);
 
-        return finalize_transfer_tickets(sender_hash, recipient_hash, num_tickets);
+        return finalize_transfer_tickets(event_id, sender_hash, recipient_hash, num_tickets, current_time);
     }
 
     async function finalize_transfer_tickets(
+        event_id: field,
         sender_hash: field,
         recipient_hash: field,
-        num_tickets: u32
+        num_tickets: u32,
+        current_time: u64,
     ) {
         // Ensure the caller has enough tickets to fulfill the transfer.
         let sender_tickets: u32 = user_tickets.get(sender_hash);
         assert(sender_tickets.gte(num_tickets));
+
+        let event: Event = events.get(event_id);
+        // Ensure current time is before the event deadline.
+        assert(current_time.lt(event.deadline));
+
         user_tickets.set(sender_hash, sender_tickets - num_tickets);
         
         // If the recipient already has tickets for this event then add the new tickets to their total
