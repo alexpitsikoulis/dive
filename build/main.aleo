@@ -11,9 +11,9 @@ struct Event:
     is_refunded as boolean;
     event_owner as address;
 
-record TicketHolder:
-    owner as address.private;
-    event_id as field.private;
+struct TicketHolder:
+    addr as address;
+    event_id as field;
 
 mapping events:
     key as field.public;
@@ -131,7 +131,7 @@ finalize refund_event:
 closure hash_ticket_holder:
     input r0 as address;
     input r1 as field;
-    cast r0 r1 into r2 as TicketHolder.record;
+    cast r0 r1 into r2 as TicketHolder;
     hash.bhp256 r2 into r3 as field;
     output r3 as field;
 

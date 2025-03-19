@@ -21,8 +21,8 @@ program dive_v0_1_0.aleo {
     }
 
     // Record of an event id an owner has tickets for, to be hashed as the key in the `user_tickets` mapping.
-    record TicketHolder {
-        owner: address,
+    struct TicketHolder {
+        addr: address,
         event_id: field,
     }
 
@@ -37,7 +37,7 @@ program dive_v0_1_0.aleo {
     // Create a hash of the record of the owner address and the id for the event they have tickets for.
     function hash_ticket_holder(ticket_owner: address, event_id: field) -> field {
         let ticket_holder: TicketHolder = TicketHolder {
-            owner: ticket_owner,
+            addr: ticket_owner,
             event_id,
         };
         return BHP256::hash_to_field(ticket_holder);
