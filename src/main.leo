@@ -35,7 +35,7 @@ program dive_v0_1_0.aleo {
 
 
     // Create a hash of the record of the owner address and the id for the event they have tickets for.
-    function hash_ticket_holder(ticket_owner: address, event_id: field) -> field {
+    inline hash_ticket_holder(ticket_owner: address, event_id: field) -> field {
         let ticket_holder: TicketHolder = TicketHolder {
             addr: ticket_owner,
             event_id,

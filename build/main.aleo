@@ -109,13 +109,6 @@ finalize refund_event:
     cast r0 r1.initial_supply r1.ticket_supply r1.redeemed_tickets r1.ticket_price true true r1.event_owner into r5 as Event;
     set r5 into events[r0];
 
-closure hash_ticket_holder:
-    input r0 as address;
-    input r1 as field;
-    cast r0 r1 into r2 as TicketHolder;
-    hash.bhp256 r2 into r3 as field;
-    output r3 as field;
-
 function buy_tickets:
     input r0 as field.private;
     input r1 as credits.aleo/credits.record;
@@ -123,13 +116,14 @@ function buy_tickets:
     input r3 as u64.public;
     input r4 as address.public;
     assert.eq self.caller r1.owner;
-    call hash_ticket_holder self.caller r0 into r5;
-    cast r2 into r6 as u64;
-    mul r6 r3 into r7;
-    call credits.aleo/transfer_private_to_public r1 dive_v0_1_0.aleo r7 into r8 r9;
-    async buy_tickets r0 r5 r2 r9 into r10;
-    output r8 as credits.aleo/credits.record;
-    output r10 as dive_v0_1_0.aleo/buy_tickets.future;
+    cast self.caller r0 into r5 as TicketHolder;
+    hash.bhp256 r5 into r6 as field;
+    cast r2 into r7 as u64;
+    mul r7 r3 into r8;
+    call credits.aleo/transfer_private_to_public r1 dive_v0_1_0.aleo r8 into r9 r10;
+    async buy_tickets r0 r6 r2 r10 into r11;
+    output r9 as credits.aleo/credits.record;
+    output r11 as dive_v0_1_0.aleo/buy_tickets.future;
 
 finalize buy_tickets:
     input r0 as field.public;
@@ -167,10 +161,12 @@ function transfer_tickets:
     input r1 as address.private;
     input r2 as u32.private;
     input r3 as u64.public;
-    call hash_ticket_holder self.caller r0 into r4;
-    call hash_ticket_holder r1 r0 into r5;
-    async transfer_tickets r0 r4 r5 r2 r3 into r6;
-    output r6 as dive_v0_1_0.aleo/transfer_tickets.future;
+    cast self.caller r0 into r4 as TicketHolder;
+    hash.bhp256 r4 into r5 as field;
+    cast r1 r0 into r6 as TicketHolder;
+    hash.bhp256 r6 into r7 as field;
+    async transfer_tickets r0 r5 r7 r2 r3 into r8;
+    output r8 as dive_v0_1_0.aleo/transfer_tickets.future;
 
 finalize transfer_tickets:
     input r0 as field.public;
@@ -201,9 +197,10 @@ finalize transfer_tickets:
 function redeem_tickets:
     input r0 as field.private;
     input r1 as u32.private;
-    call hash_ticket_holder self.caller r0 into r2;
-    async redeem_tickets r0 r2 r1 into r3;
-    output r3 as dive_v0_1_0.aleo/redeem_tickets.future;
+    cast self.caller r0 into r2 as TicketHolder;
+    hash.bhp256 r2 into r3 as field;
+    async redeem_tickets r0 r3 r1 into r4;
+    output r4 as dive_v0_1_0.aleo/redeem_tickets.future;
 
 finalize redeem_tickets:
     input r0 as field.public;
@@ -226,9 +223,10 @@ finalize redeem_tickets:
 function claim_refund:
     input r0 as field.private;
     input r1 as credits.aleo/credits.record;
-    call hash_ticket_holder r1.owner r0 into r2;
-    async claim_refund r0 r2 into r3;
-    output r3 as dive_v0_1_0.aleo/claim_refund.future;
+    cast r1.owner r0 into r2 as TicketHolder;
+    hash.bhp256 r2 into r3 as field;
+    async claim_refund r0 r3 into r4;
+    output r4 as dive_v0_1_0.aleo/claim_refund.future;
 
 finalize claim_refund:
     input r0 as field.public;
