@@ -70,25 +70,6 @@ finalize add_tickets:
     cast r1 r7 r8 r3.redeemed_tickets r3.ticket_price false false r3.event_owner into r9 as Event;
     set r9 into events[r1];
 
-function update_price:
-    input r0 as field.private;
-    input r1 as u64.private;
-    async update_price self.caller r0 r1 into r2;
-    output r2 as dive_v0_1_0.aleo/update_price.future;
-
-finalize update_price:
-    input r0 as address.public;
-    input r1 as field.public;
-    input r2 as u64.public;
-    get events[r1] into r3;
-    assert.eq r0 r3.event_owner;
-    not r3.is_ended into r4;
-    not r3.is_refunded into r5;
-    and r4 r5 into r6;
-    assert.eq r6 true;
-    cast r1 r3.initial_supply r3.ticket_supply r3.redeemed_tickets r2 r3.is_ended r3.is_refunded r3.event_owner into r7 as Event;
-    set r7 into events[r1];
-
 function end_event:
     input r0 as field.private;
     async end_event r0 into r1;

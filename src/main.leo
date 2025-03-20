@@ -97,32 +97,6 @@ program dive_v0_1_0.aleo {
         events.set(event_id, updated_event);
     }
 
-
-    // Change the ticket price for an event.
-    async transition update_price(event_id: field, new_price: u64) -> Future {
-        return finalize_update_price(self.caller, event_id, new_price);
-    }
-
-    async function finalize_update_price(caller: address, event_id: field, new_price: u64) {
-        let event: Event = events.get(event_id);
-        // Ensure the transition was called by the event owner.
-        assert_eq(caller, event.event_owner);
-        // Ensure the event has not ended or been refunded.
-        assert(!event.is_ended && !event.is_refunded);
-        let updated_event: Event = Event {
-            id: event_id,
-            initial_supply: event.initial_supply,
-            ticket_supply: event.ticket_supply,
-            ticket_price: new_price,
-            redeemed_tickets: event.redeemed_tickets,
-            is_ended: event.is_ended,
-            is_refunded: event.is_refunded,
-            event_owner: event.event_owner,
-        };
-        events.set(event_id, updated_event);
-    }
-
-
     // End the event, preventing further ticket sales and redemption.
     // If more than half of the sold tickets were redeemed then the event owner receives the remainder of their escrow balance.
     async transition end_event(private event_id: field) -> Future {
